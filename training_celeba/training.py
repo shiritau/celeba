@@ -10,19 +10,16 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
-import torchmetrics
+#import torchmetrics
 
 torch.manual_seed(42)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 vgg_model = torch.hub.load('pytorch/vision:v0.10.0', 'vgg16', pretrained=True)
 
 
-
 image_size = 224
 imagenet_mean = [0.485, 0.456, 0.406]  # mean of the ImageNet dataset for normalizing
 imagenet_std = [0.229, 0.224, 0.225]  # std of the ImageNet dataset for normalizing
-
-
 
 transforms = tfms.Compose([tfms.Resize((image_size, image_size)),
                            tfms.ToTensor(),
@@ -41,11 +38,11 @@ def train_loop(data_dir, weights_dir, epochs=100):
                                                 transform=transforms)
 
     train_dataloader = DataLoader(dataset=train_dataset,
-                              batch_size=32,
+                              batch_size=16,
                               shuffle=True,
                               num_workers=4)
     val_dataloader = DataLoader(dataset=val_dataset,
-                              batch_size=32,
+                              batch_size=16,
                               shuffle=False,
                               num_workers=4)
     model = load_model()
@@ -60,8 +57,6 @@ def train_loop(data_dir, weights_dir, epochs=100):
         epoch_train_loss, epoch_train_acc = [], []
 
         for i, data in enumerate(train_dataloader):
-            if i>10:
-                break
             inputs = data[0]
             labels = data[1]
 
@@ -70,12 +65,14 @@ def train_loop(data_dir, weights_dir, epochs=100):
 
             # forward + backward + optimize
             outputs = model(inputs.float())
+            sigmoid_outputs = 1 / (1 + torch.exp(-outputs)).float()
 
             loss = criterion(outputs, labels.float())
             loss.backward()
             optimizer.step()
-            outputs = (outputs > 0.5).float()
-            curr_train_acc = np.mean(1-(labels-outputs).detach().numpy())
+
+            thresh_outputs = (sigmoid_outputs > 0.5).float()
+            curr_train_acc = np.mean(1-np.abs(labels-thresh_outputs).detach().numpy())
 
             # print statistics
             epoch_train_loss.append(loss.item())
@@ -98,8 +95,10 @@ def train_loop(data_dir, weights_dir, epochs=100):
             outputs = model(inputs.float())
             #outputs = torch.nn.functional.softmax(outputs, dim=1)
             val_loss = criterion(outputs, labels.float())
-            outputs = (outputs > 0.5).float()
-            curr_val_acc = np.mean(1-(labels-outputs).detach().numpy())
+
+            sigmoid_outputs = 1 / (1 + torch.exp(-outputs)).float()
+            thresh_outputs = (sigmoid_outputs > 0.5).float()
+            curr_val_acc = np.mean(1 - np.abs(labels - thresh_outputs).detach().numpy())
             epoch_val_loss.append(val_loss.item())
             epoch_val_acc.append(curr_val_acc)
 
