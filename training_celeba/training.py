@@ -1,5 +1,4 @@
 import os
-import torch
 import torchvision
 import torchvision.transforms as tfms
 import pandas as pd
@@ -9,6 +8,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn as nn
+from config import trainConfig
 from torch.utils.tensorboard import SummaryWriter
 #import torchmetrics
 
@@ -110,14 +110,15 @@ def train_loop(data_dir, weights_dir, epochs=100):
             # writer.add_scalar('Accuracy/val', np.mean(np.array(epoch_val_acc)), epoch)
 
 if __name__ == '__main__':
-    root_dir = r"C:\Users\shiri\Documents\School\Master\faces\CelebA\exps"
-    data_dir =  r"C:\Users\shiri\Documents\School\Master\faces\CelebA"
-    exp_name ='40_features_20_04'
+    conf = trainConfig()
+    root_dir = conf.root_dir
+    data_dir =  conf.data_dir
+    exp_name = conf.exp_name
     exp_dir = f'{root_dir}/{exp_name}'
     weights_dir = f'{exp_dir}/weights'
     for dir in [exp_dir, weights_dir]:
         if not os.path.isdir(dir):
             os.mkdir(dir)
-    train_loop(data_dir, weights_dir, 20)
+    train_loop(data_dir, weights_dir, conf.epochs)
 
 
